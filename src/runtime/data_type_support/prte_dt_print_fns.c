@@ -471,6 +471,32 @@ void prte_app_print(char **output, prte_job_t *jdata, prte_app_context_t *src)
         tmp = tmp2;
     }
 
+    // Print list of envs space-separated, e.g. "VAR1=VAL1 VAR2=VAL2 ..." and make sure 
+    // they are enclosed with ''
+    tmp3 = NULL;
+    for (i = 0; NULL != src->env && NULL != src->env[i]; i++) {
+        if (NULL == tmp3) {
+            pmix_asprintf(&tmp3, "'%s", src->env[i]);
+        } else {
+            char *tmp4;
+            pmix_asprintf(&tmp4, "%s %s", tmp3, src->env[i]);
+            free(tmp3);
+            tmp3 = tmp4;
+        }
+    }
+    if (NULL != tmp3) {
+        char *tmp4;
+        pmix_asprintf(&tmp4, "%s'", tmp3);
+        free(tmp3);
+        tmp3 = tmp4;
+    } else {
+        tmp3 = strdup("''");
+    }
+    pmix_asprintf(&tmp2, "%s\n\tEnvs: %s", tmp, tmp3);
+    free(tmp);
+    free(tmp3);
+    tmp = tmp2;
+
     tmp3 = NULL;
     for (i=0; NULL != src->env && NULL != src->env[i]; i++) {
         if (0 == strncmp(src->env[i], "PMIX_PREFIX", strlen("PMIX_PREFIX"))) {

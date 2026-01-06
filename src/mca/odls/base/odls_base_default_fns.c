@@ -1074,19 +1074,73 @@ void prte_odls_base_spawn_proc(int fd, short sd, void *cbdata)
                         "%s odls:launch spawning child %s", PRTE_NAME_PRINT(PRTE_PROC_MY_NAME),
                         PRTE_NAME_PRINT(&child->name));
 
-    if (15 < pmix_output_get_verbosity(prte_odls_base_framework.framework_output)) {
-        /* dump what is going to be exec'd */
-        char *output = NULL;
-        prte_app_print(&output, jobdat, app);
-        pmix_output(prte_odls_base_framework.framework_output, "%s", output);
-        free(output);
+    if (15 < pmix_output_get_verbosity(prte_odls_base_framework.framework_output)) {  
+        /* dump what is going to be exec'd */  
+        char *output = NULL;  
+        prte_app_print(&output, jobdat, app);  
+        pmix_output(prte_odls_base_framework.framework_output, "%s", output);  
+        free(output);  
+    
+        // Print all the env vars from cd->env with values enclosed in quotes  
+        char *env_string = NULL;  
+        for (i=0; NULL != cd->env && NULL != cd->env[i]; i++) {  
+            char *eq_pos = strchr(cd->env[i], '=');  
+            if (NULL != eq_pos) {  
+                // Split into name and value  
+                *eq_pos = '\0';  
+                char *name = cd->env[i];  
+                char *value = eq_pos + 1;  
+                
+                char *formatted_var;  
+                pmix_asprintf(&formatted_var, "%s=\"%s\"", name, value);  
+                
+                if (NULL == env_string) {  
+                    env_string = formatted_var;  
+                } else {  
+                    char *tmp = env_string;  
+                    pmix_asprintf(&env_string, "%s %s", tmp, formatted_var);  
+                    free(tmp);  
+                    free(formatted_var);  
+                }  
+                
+                // Restore the '=' for potential future use  
+                *eq_pos = '=';  
+            } else {  
+                // No '=' found, treat as name with empty value  
+                char *formatted_var;  
+                pmix_asprintf(&formatted_var, "%s=\"\"", cd->env[i]);  
+                
+                if (NULL == env_string) {  
+                    env_string = formatted_var;  
+                } else {  
+                    char *tmp = env_string;  
+                    pmix_asprintf(&env_string, "%s %s", tmp, formatted_var);  
+                    free(tmp);  
+                    free(formatted_var);  
+                }  
+            }  
+        }  
+        if (NULL != env_string) {  
+            pmix_output(prte_odls_base_framework.framework_output, "Complete env: %s", env_string);  
+            free(env_string);  
+        }  
     }
 
-    if (PRTE_SUCCESS != (rc = cd->fork_local(cd))) {
-        /* error message already output */
-        state = PRTE_PROC_STATE_FAILED_TO_START;
-        goto errorout;
+    if (!prte_odls_globals.skip_spawn) {
+        pmix_output_verbose(2, prte_odls_base_framework.framework_output,
+                            "%s odls:pdefault:not skipping the local spawn",
+                            PRTE_NAME_PRINT(PRTE_PROC_MY_NAME));
+        if (PRTE_SUCCESS != (rc = cd->fork_local(cd))) {
+            /* error message already output */
+            state = PRTE_PROC_STATE_FAILED_TO_START;
+            goto errorout;
+        }
+    } else {
+        pmix_output_verbose(2, prte_odls_base_framework.framework_output,
+                    "%s odls:pdefault:skipping spawn of local procs as requested by MCA",
+                    PRTE_NAME_PRINT(PRTE_PROC_MY_NAME));
     }
+
     if (PRTE_PROC_IS_MASTER) {
         /* locally store the pid */
         pidval.type = PMIX_PID;

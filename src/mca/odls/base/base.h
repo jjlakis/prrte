@@ -57,6 +57,7 @@ typedef struct {
     int next_base;                // counter to load-level thread use
     bool signal_direct_children_only;
     char *exec_agent;
+    bool skip_spawn;
 } prte_odls_globals_t;
 
 PRTE_EXPORT extern prte_odls_globals_t prte_odls_globals;

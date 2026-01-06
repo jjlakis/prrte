@@ -118,6 +118,12 @@ static int prte_odls_base_register(pmix_mca_base_register_flag_t flags)
                                       PMIX_MCA_BASE_VAR_TYPE_STRING,
                                       &prte_odls_globals.exec_agent);
 
+    prte_odls_globals.skip_spawn = false;
+    (void) pmix_mca_base_var_register("prte", "odls", "base", "skip_spawn",
+                                      "Skip the actual process spawning",
+                                      PMIX_MCA_BASE_VAR_TYPE_BOOL,
+                                      &prte_odls_globals.skip_spawn);
+
     return PRTE_SUCCESS;
 }
 
